@@ -33,6 +33,8 @@ function worker1(a, b, c, callback) {
 }
 ```
 
+The `callback` should not be called when `inject` is used. Since the tasks injected are supposed to replace the current one.
+
 ### Queue2#push(arg1, arg2, arg3...)
 
 Pushes a task onto the queue. If the last argument is a function and it corresponds with the position of the callback from the first worker, then it will be called once there is an error with the task, or the task finishes.
