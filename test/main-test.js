@@ -43,14 +43,13 @@ function createQ(c, inject, amount) {
 
   return function(done) {
     var n = 0;
-    var noin = true;
     var q = new Q(function worker1(data, callback) {
       var self = this;
 
       random1.push(function() {
         // Check for inject.
-        if (typeof inject === 'number' && inject === self.num && noin) {
-          noin = false;
+        if (typeof inject === 'number' &&
+            inject === self.num && !self.injected) {
           amount = amount || 1;
           var arr = new Array(amount);
           for (var i = 0; i < amount; i++) {
