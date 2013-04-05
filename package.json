@@ -1,0 +1,22 @@
+{
+  "name": "queue2",
+  "description": "A unordered queue and ordered queue working together.",
+  "keywords": ["queue", "ordered", "concurrency"],
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/fent/queue2.js.git"
+  },
+  "author": "fent (https://github.com/fent)",
+  "main": "./lib/index.js",
+  "scripts": {
+    "test": "mocha -R spec test/*-test.js"
+  },
+  "devDependencies": {
+    "mocha": "*"
+  },
+  "licenses": [ {
+    "type": "MIT",
+    "url" : "http://github.com/fent/queue2.js/raw/master/LICENSE"
+  }]
+}
