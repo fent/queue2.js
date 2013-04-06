@@ -1,4 +1,4 @@
-# queue2 [![Build Status](https://secure.travis-ci.org/fent/queue2.js.png)](http://travis-ci.org/fent/queue2.js)
+# queue2.js [![Build Status](https://secure.travis-ci.org/fent/queue2.js.png)](http://travis-ci.org/fent/queue2.js)
 
 A queue with a unique use case.
 
@@ -63,6 +63,14 @@ Number of active tasks that are running.
 ### Queue2#die()
 
 Kills the queue.
+
+
+# Events
+
+### Event: 'error'
+* `Error`
+
+Emitted when there is an error processing a task and a callback isn't given to the `push` method.
 
 ### Event: 'full'
 
