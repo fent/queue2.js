@@ -1,12 +1,14 @@
-# queue2.js [![Build Status](https://secure.travis-ci.org/fent/queue2.js.png)](http://travis-ci.org/fent/queue2.js)
+# queue2.js
 
 A queue with a unique use case.
 
+[![Build Status](https://secure.travis-ci.org/fent/queue2.js.png)](http://travis-ci.org/fent/queue2.js) [![Dependency Status](https://gemnasium.com/fent/queue2.js.svg)](https://gemnasium.com/fent/queue2.js)
 
 # Motive
+
 I created this queue data structure because of the unique use case I ran into. I needed to open files in an asynchronous way, to maximize efficiency. But I needed to read from them in order, including subdirectories. This queue helped me do that, although for now I can't think of other use cases for this.
 
-I've also tried to think of a way to simplify this and possibly break it down into 2 type of queues. But since both workers depend on each other and share the same concurrency, I'm starting to think this is what the simplified solution is.
+I've also tried to think of a way to simplify this and possibly break it down into 2 type of queues. But since both workers depend on each other and share the same concurrency, I'm starting to think this is what the simplified solution is. :/
 
 
 # API
