@@ -64,10 +64,10 @@ function createQ(c, inject, amount) {
         callback(null, data);
       });
     }, function worker2(data, callback) {
-      if (!data) { return; }
+      if (!data) { return callback(); }
       assert.equal(data, list[n]);
 
-      if (++n === list.length) done();
+      if (++n === list.length) { done(); }
       random2.push(callback);
     }, c || 250);
 
@@ -120,6 +120,45 @@ describe('Queue jobs', function() {
         it('Calls methods in correct order', createQ(200, 2, 3));
       });
 
+      describe('with low concurrency', function() {
+        it('Calls methods in correct order', createQ(2, 2, 3));
+      });
+
     });
+  });
+
+  describe('Push without all arguments', function() {
+    it('Worker gets called with `undefined` arguments', function(done) {
+      var worker1a = null, worker2a = null;
+      var q = new Q(function(a, callback) {
+        worker1a = a;
+        setTimeout(callback);
+      }, function(a, callback) {
+        worker2a = a;
+        setTimeout(callback);
+      });
+      q.on('drain', function() {
+        assert.equal(worker1a, undefined);
+        assert.equal(worker2a, undefined);
+        done();
+      });
+      q.push();
+    });
+  });
+});
+
+describe('Kill a queue mid task', function() {
+  it('Survives', function(done) {
+    var q = new Q(function() {
+      setTimeout(function() {
+        q.die();
+
+        // `done` shouldn't be called twice.
+        done();
+      });
+    }, function() {}, 1);
+    q.push();
+    q.push();
+    q.push();
   });
 });
