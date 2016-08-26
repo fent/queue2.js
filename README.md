@@ -2,7 +2,7 @@
 
 A queue with a unique use case.
 
-[![Build Status](https://secure.travis-ci.org/fent/queue2.js.png)](http://travis-ci.org/fent/queue2.js)
+[![Build Status](https://secure.travis-ci.org/fent/queue2.js.svg)](http://travis-ci.org/fent/queue2.js)
 [![Dependency Status](https://gemnasium.com/fent/queue2.js.svg)](https://gemnasium.com/fent/queue2.js)
 [![codecov](https://codecov.io/gh/fent/queue2.js/branch/master/graph/badge.svg)](https://codecov.io/gh/fent/queue2.js)
 
