@@ -20,10 +20,5 @@
     "istanbul": "*",
     "mocha": "*"
   },
-  "licenses": [
-    {
-      "type": "MIT",
-      "url": "http://github.com/fent/queue2.js/raw/master/LICENSE"
-    }
-  ]
+  "license": "MIT"
 }
