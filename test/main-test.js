@@ -133,10 +133,10 @@ describe('Queue jobs', () => {
       var worker1a = null, worker2a = null;
       var q = new Q((a, callback) => {
         worker1a = a;
-        setTimeout(callback);
+        process.nextTick(callback);
       }, (a, callback) => {
         worker2a = a;
-        setTimeout(callback);
+        process.nextTick(callback);
       });
       q.on('drain', () => {
         assert.equal(worker1a, undefined);
@@ -151,7 +151,7 @@ describe('Queue jobs', () => {
 describe('Kill a queue mid task', () => {
   it('Survives', (done) => {
     var q = new Q(() => {
-      setTimeout(() => {
+      process.nextTick(() => {
         q.die();
 
         // `done` shouldn't be called twice.
