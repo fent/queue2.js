@@ -1,5 +1,5 @@
-var Q = require('..');
-var assert = require('assert');
+const Q      = require('..');
+const assert = require('assert');
 
 
 // Shuffles an array.
@@ -15,25 +15,28 @@ function shuffle(arr) {
 }
 
 // Calls pushed callbacks in random order once they are all pushed.
-function randomCall(c, list) {
-  this.callbacks = [];
-  this.c = c;
-  this.list = list;
-  this.n = 0;
-}
+class randomCall {
+  constructor(c, list) {
+    this.callbacks = [];
+    this.c = c;
+    this.list = list;
+    this.n = 0;
+  }
 
-randomCall.prototype.push = function(callback) {
-  this.callbacks.push(callback);
-  this.n++;
-  if (this.n % this.c === 0 || this.n === this.list.length) {
-    shuffle(this.callbacks);
+  push(callback) {
+    this.callbacks.push(callback);
+    this.n++;
+    if (this.n % this.c === 0 || this.n === this.list.length) {
+      shuffle(this.callbacks);
 
-    var cb;
-    while (cb = this.callbacks.shift()) {
-      cb();
+      var cb;
+      while ((cb = this.callbacks.shift())) {
+        cb();
+      }
     }
   }
-};
+}
+
 
 // Macro.
 function createQ(c, inject, amount) {
@@ -41,15 +44,13 @@ function createQ(c, inject, amount) {
   var random1 = new randomCall(c, list);
   var random2 = new randomCall(c, list);
 
-  return function(done) {
+  return (done) => {
     var n = 0;
     var q = new Q(function worker1(data, callback) {
-      var self = this;
-
-      random1.push(function() {
+      random1.push(() => {
         // Check for inject.
         if (typeof inject === 'number' &&
-            inject === self.num && !self.injected) {
+            inject === this.num && !this.injected) {
           amount = amount || 1;
           var arr = new Array(amount);
           for (var i = 0; i < amount; i++) {
@@ -57,13 +58,13 @@ function createQ(c, inject, amount) {
           }
 
           list.splice.apply(list, [inject, 1].concat(arr));
-          self.inject(arr, inject);
+          this.inject(arr, inject);
           return;
         }
 
         callback(null, data);
       });
-    }, function worker2(data, callback) {
+    }, (data, callback) => {
       if (!data) { return callback(); }
       assert.equal(data, list[n]);
 
@@ -71,73 +72,73 @@ function createQ(c, inject, amount) {
       random2.push(callback);
     }, c || 250);
 
-    list.forEach(function(a) {
+    list.forEach((a) => {
       q.push(a);
     });
   };
 }
 
-describe('Queue jobs', function() {
+describe('Queue jobs', () => {
 
   it('Calls methods in the order they were pushed', createQ());
 
-  describe('with small concurrency', function() {
+  describe('with small concurrency', () => {
     it('Calls methods in correct order', createQ(2));
   });
 
-  describe('with 1 concurrency', function() {
+  describe('with 1 concurrency', () => {
     it('Calls methods in correct order', createQ(1));
   });
 
-  describe('and inject', function() {
-    describe('one job', function() {
+  describe('and inject', () => {
+    describe('one job', () => {
 
-      describe('in the beginning', function() {
+      describe('in the beginning', () => {
         it('Calls methods in correct order', createQ(200, 0));
       });
 
-      describe('in the middle', function() {
+      describe('in the middle', () => {
         it('Calls methods in correct order', createQ(200, 1));
       });
 
-      describe('in the end', function() {
+      describe('in the end', () => {
         it('Calls methods in correct order', createQ(200, 2));
       });
 
     });
 
-    describe('several jobs', function() {
+    describe('several jobs', () => {
 
-      describe('in the beginning', function() {
+      describe('in the beginning', () => {
         it('Calls methods in correct order', createQ(200, 0, 3));
       });
 
-      describe('in the middle', function() {
+      describe('in the middle', () => {
         it('Calls methods in correct order', createQ(200, 1, 3));
       });
 
-      describe('in the end', function() {
+      describe('in the end', () => {
         it('Calls methods in correct order', createQ(200, 2, 3));
       });
 
-      describe('with low concurrency', function() {
+      describe('with low concurrency', () => {
         it('Calls methods in correct order', createQ(2, 2, 3));
       });
 
     });
   });
 
-  describe('Push without all arguments', function() {
-    it('Worker gets called with `undefined` arguments', function(done) {
+  describe('Push without all arguments', () => {
+    it('Worker gets called with `undefined` arguments', (done) => {
       var worker1a = null, worker2a = null;
-      var q = new Q(function(a, callback) {
+      var q = new Q((a, callback) => {
         worker1a = a;
         setTimeout(callback);
-      }, function(a, callback) {
+      }, (a, callback) => {
         worker2a = a;
         setTimeout(callback);
       });
-      q.on('drain', function() {
+      q.on('drain', () => {
         assert.equal(worker1a, undefined);
         assert.equal(worker2a, undefined);
         done();
@@ -147,16 +148,16 @@ describe('Queue jobs', function() {
   });
 });
 
-describe('Kill a queue mid task', function() {
-  it('Survives', function(done) {
-    var q = new Q(function() {
-      setTimeout(function() {
+describe('Kill a queue mid task', () => {
+  it('Survives', (done) => {
+    var q = new Q(() => {
+      setTimeout(() => {
         q.die();
 
         // `done` shouldn't be called twice.
         done();
       });
-    }, function() {}, 1);
+    }, () => {}, 1);
     q.push();
     q.push();
     q.push();

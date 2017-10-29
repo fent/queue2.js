@@ -46,12 +46,12 @@ Pushes a task onto the queue. If the last argument is a function and it correspo
 For example:
 
 ```js
-var q = new Queue2(function worker1(a, callback) {
+const q = new Queue2((a, callback) => {
   // a === 1
   callback(null);
 }, worker2);
 
-q.push(1, function(err) {
+q.push(1, (err) => {
  if (err) throw err;
 
  // will be called once this finishes

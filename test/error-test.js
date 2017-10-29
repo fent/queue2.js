@@ -1,16 +1,16 @@
-var Q = require('..');
-var assert = require('assert');
+const Q      = require('..');
+const assert = require('assert');
 
 
-describe('Worker 1 calls callback with error', function() {
-  describe('With task callback', function() {
-    it('Task callback gets error', function(done) {
-      var q = new Q(function(a, callback) {
-        setTimeout(function() {
+describe('Worker 1 calls callback with error', () => {
+  describe('With task callback', () => {
+    it('Task callback gets error', (done) => {
+      var q = new Q((a, callback) => {
+        setTimeout(() => {
           callback(a === 1 ? new Error('hello') : null);
         });
-      }, function(callback) { callback(); });
-      q.push(1, function(err) {
+      }, (callback) => { callback(); });
+      q.push(1, (err) => {
         assert.ok(err);
         assert.equal(err.message, 'hello');
         done();
@@ -20,14 +20,14 @@ describe('Worker 1 calls callback with error', function() {
     });
   });
 
-  describe('Without task callback', function() {
-    it('Error is emitted', function(done) {
-      var q = new Q(function(a, callback) {
-        setTimeout(function() {
+  describe('Without task callback', () => {
+    it('Error is emitted', (done) => {
+      var q = new Q((a, callback) => {
+        setTimeout(() => {
           callback(a === 1 ? new Error('foo') : null);
         });
-      }, function(callback) { callback(); });
-      q.on('error', function(err) {
+      }, (callback) => { callback(); });
+      q.on('error', (err) => {
         assert.ok(err);
         assert.equal(err.message, 'foo');
         done();
@@ -37,15 +37,15 @@ describe('Worker 1 calls callback with error', function() {
   });
 });
 
-describe('Worker 2 calls callback with error', function() {
-  describe('With task callback', function() {
-    it('Task callback gets error', function(done) {
-      var q = new Q(function(a, callback) {
+describe('Worker 2 calls callback with error', () => {
+  describe('With task callback', () => {
+    it('Task callback gets error', (done) => {
+      var q = new Q((a, callback) => {
         callback();
-      }, function(a, callback) {
+      }, (a, callback) => {
         callback(new Error('hello'));
       });
-      q.push(1, function(err) {
+      q.push(1, (err) => {
         assert.ok(err);
         assert.equal(err.message, 'hello');
         done();
@@ -54,14 +54,14 @@ describe('Worker 2 calls callback with error', function() {
     });
   });
 
-  describe('Without task callback', function() {
-    it('Error is emitted', function(done) {
-      var q = new Q(function(callback) {
+  describe('Without task callback', () => {
+    it('Error is emitted', (done) => {
+      var q = new Q((callback) => {
         callback();
-      }, function(a, callback) {
+      }, (a, callback) => {
         callback(new Error('foo'));
       });
-      q.on('error', function(err) {
+      q.on('error', (err) => {
         assert.ok(err);
         assert.equal(err.message, 'foo');
         done();
