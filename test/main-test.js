@@ -1,10 +1,12 @@
+'use strict';
+
 const Q      = require('..');
 const assert = require('assert');
 
 
 // Shuffles an array.
 function shuffle(arr) {
-  var i = this.length, j, tmp;
+  var i = arr.length, j, tmp;
   if (i === 0) return;
   while (--i) {
     j = Math.floor(Math.random() * (i + 1));
