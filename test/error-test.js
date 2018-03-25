@@ -35,6 +35,33 @@ describe('Worker 1 calls callback with error', () => {
       q.push(1);
     });
   });
+
+  describe('Later task finishes before errored task', () => {
+    it('All task finish', (done) => {
+      var otherCallback, errored;
+      var q = new Q((a, callback) => setTimeout(() => {
+        console.log('worker1', a);
+        if (a === 1) {
+          otherCallback = callback;
+        } else if (a === 2) {
+          callback(null, a);
+          otherCallback(new Error('thing'), a);
+        }
+      }), (a, callback) => {
+        console.log('worker2', a, q.active);
+        setTimeout(callback);
+      });
+      q.on('error', () => {
+        errored = true;
+      });
+      q.on('drain', () => {
+        assert.ok(errored);
+        done();
+      });
+      q.push(1);
+      q.push(2);
+    });
+  });
 });
 
 describe('Worker 2 calls callback with error', () => {
