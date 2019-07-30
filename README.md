@@ -4,7 +4,7 @@ A queue with a unique use case.
 
 [![Build Status](https://secure.travis-ci.org/fent/queue2.js.svg)](http://travis-ci.org/fent/queue2.js)
 [![Dependency Status](https://david-dm.org/fent/queue2.js.svg)](https://david-dm.org/fent/queue2.js)
-[![codecov](https://codecov.io/gh/fent/queue2.js/branch/master/graph/badge.svg)](https://codecov.io/gh/fent/queue2.js)
+[![codecov](https://codecov.io/gh/fent/queue2.js/branch/master/graph/badge.svg)](https://codecov.io/gh/fent/queue2.js) [![Greenkeeper badge](https://badges.greenkeeper.io/fent/queue2.js.svg)](https://greenkeeper.io/)
 
 # Motive
 
