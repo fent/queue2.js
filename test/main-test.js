@@ -1,12 +1,10 @@
-'use strict';
-
 const Q      = require('..');
 const assert = require('assert');
 
 
 // Shuffles an array.
-function shuffle(arr) {
-  var i = arr.length, j, tmp;
+const shuffle = (arr) => {
+  let i = arr.length, j, tmp;
   if (i === 0) return;
   while (--i) {
     j = Math.floor(Math.random() * (i + 1));
@@ -14,7 +12,7 @@ function shuffle(arr) {
     arr[i] = arr[j];
     arr[j] = tmp;
   }
-}
+};
 
 // Calls pushed callbacks in random order once they are all pushed.
 class randomCall {
@@ -31,7 +29,7 @@ class randomCall {
     if (this.n % this.c === 0 || this.n === this.list.length) {
       shuffle(this.callbacks);
 
-      var cb;
+      let cb;
       while ((cb = this.callbacks.shift())) {
         cb();
       }
@@ -41,25 +39,25 @@ class randomCall {
 
 
 // Macro.
-function createQ(c, inject, amount) {
-  var list = ['a', 'b', 'c'];
-  var random1 = new randomCall(c, list);
-  var random2 = new randomCall(c, list);
+const createQ = (c, inject, amount) => {
+  let list = ['a', 'b', 'c'];
+  let random1 = new randomCall(c, list);
+  let random2 = new randomCall(c, list);
 
   return (done) => {
-    var n = 0;
-    var q = new Q(function worker1(data, callback) {
+    let n = 0;
+    let q = new Q(function worker1(data, callback) {
       random1.push(() => {
         // Check for inject.
         if (typeof inject === 'number' &&
             inject === this.num && !this.injected) {
           amount = amount || 1;
-          var arr = new Array(amount);
-          for (var i = 0; i < amount; i++) {
+          let arr = new Array(amount);
+          for (let i = 0; i < amount; i++) {
             arr[i] = 'injected' + i;
           }
 
-          list.splice.apply(list, [inject, 1].concat(arr));
+          list.splice(inject, 1, ...arr);
           this.inject(arr, inject);
           return;
         }
@@ -78,7 +76,7 @@ function createQ(c, inject, amount) {
       q.push(a);
     });
   };
-}
+};
 
 describe('Queue jobs', () => {
 
@@ -132,8 +130,8 @@ describe('Queue jobs', () => {
 
   describe('Push without all arguments', () => {
     it('Worker gets called with `undefined` arguments', (done) => {
-      var worker1a = null, worker2a = null;
-      var q = new Q((a, callback) => {
+      let worker1a = null, worker2a = null;
+      let q = new Q((a, callback) => {
         worker1a = a;
         process.nextTick(callback);
       }, (a, callback) => {
@@ -152,7 +150,7 @@ describe('Queue jobs', () => {
 
 describe('Kill a queue mid task', () => {
   it('Survives', (done) => {
-    var q = new Q(() => {
+    let q = new Q(() => {
       process.nextTick(() => {
         q.die();
 

@@ -17,7 +17,7 @@ I've also tried to think of a way to simplify this and possibly break it down in
 
 ### new Queue2(worker1, worker2, concurrency)
 
-Creates a queue with the given workers and concurrency. Jobs will be executed asynchronously with no more than `concurrency` running at once. `worker1` will be alled the arguments which `Queue2#push()` was called with plus a callback function that should be called with either an error or results when the task finishes.
+Creates a queue with the given workers and concurrency. Jobs will be executed asynchronously with no more than `concurrency` running at once. `worker1` will be called with the arguments which `Queue2#push()` was called with plus a callback function that should be called with either an error or results when the task finishes.
 
 ```js
 function worker1(a, b, c, callback) {

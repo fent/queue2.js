@@ -5,9 +5,9 @@ const assert = require('assert');
 describe('Worker 1 calls callback with error', () => {
   describe('With task callback', () => {
     it('Task callback gets error', (done) => {
-      var q = new Q((a, callback) => {
+      let q = new Q((a, callback) => {
         setTimeout(() => {
-          callback(a === 1 ? new Error('hello') : null);
+          callback(a === 1 ? Error('hello') : null);
         });
       }, (callback) => { callback(); });
       q.push(1, (err) => {
@@ -22,9 +22,9 @@ describe('Worker 1 calls callback with error', () => {
 
   describe('Without task callback', () => {
     it('Error is emitted', (done) => {
-      var q = new Q((a, callback) => {
+      let q = new Q((a, callback) => {
         setTimeout(() => {
-          callback(a === 1 ? new Error('foo') : null);
+          callback(a === 1 ? Error('foo') : null);
         });
       }, (callback) => { callback(); });
       q.on('error', (err) => {
@@ -38,14 +38,14 @@ describe('Worker 1 calls callback with error', () => {
 
   describe('Later task finishes before errored task', () => {
     it('All task finish', (done) => {
-      var otherCallback, errored;
-      var q = new Q((a, callback) => setTimeout(() => {
+      let otherCallback, errored;
+      let q = new Q((a, callback) => setTimeout(() => {
         console.log('worker1', a);
         if (a === 1) {
           otherCallback = callback;
         } else if (a === 2) {
           callback(null, a);
-          otherCallback(new Error('thing'), a);
+          otherCallback(Error('thing'), a);
         }
       }), (a, callback) => {
         console.log('worker2', a, q.active);
@@ -67,10 +67,10 @@ describe('Worker 1 calls callback with error', () => {
 describe('Worker 2 calls callback with error', () => {
   describe('With task callback', () => {
     it('Task callback gets error', (done) => {
-      var q = new Q((a, callback) => {
+      let q = new Q((a, callback) => {
         callback();
       }, (a, callback) => {
-        callback(new Error('hello'));
+        callback(Error('hello'));
       });
       q.push(1, (err) => {
         assert.ok(err);
@@ -83,10 +83,10 @@ describe('Worker 2 calls callback with error', () => {
 
   describe('Without task callback', () => {
     it('Error is emitted', (done) => {
-      var q = new Q((callback) => {
+      let q = new Q((callback) => {
         callback();
       }, (a, callback) => {
-        callback(new Error('foo'));
+        callback(Error('foo'));
       });
       q.on('error', (err) => {
         assert.ok(err);
