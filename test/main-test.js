@@ -15,7 +15,7 @@ const shuffle = (arr) => {
 };
 
 // Calls pushed callbacks in random order once they are all pushed.
-class randomCall {
+class RandomCall {
   constructor(c, list) {
     this.callbacks = [];
     this.c = c;
@@ -41,8 +41,8 @@ class randomCall {
 // Macro.
 const createQ = (c, inject, amount) => {
   let list = ['a', 'b', 'c'];
-  let random1 = new randomCall(c, list);
-  let random2 = new randomCall(c, list);
+  let random1 = new RandomCall(c, list);
+  let random2 = new RandomCall(c, list);
 
   return (done) => {
     let n = 0;

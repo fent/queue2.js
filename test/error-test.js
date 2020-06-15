@@ -40,7 +40,6 @@ describe('Worker 1 calls callback with error', () => {
     it('All task finish', (done) => {
       let otherCallback, errored;
       let q = new Q((a, callback) => setTimeout(() => {
-        console.log('worker1', a);
         if (a === 1) {
           otherCallback = callback;
         } else if (a === 2) {
@@ -48,7 +47,6 @@ describe('Worker 1 calls callback with error', () => {
           otherCallback(Error('thing'), a);
         }
       }), (a, callback) => {
-        console.log('worker2', a, q.active);
         setTimeout(callback);
       });
       q.on('error', () => {
