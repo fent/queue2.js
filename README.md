@@ -2,8 +2,8 @@
 
 A queue with a unique use case.
 
-[![Build Status](https://secure.travis-ci.org/fent/queue2.js.svg)](http://travis-ci.org/fent/queue2.js)
-![Depfu](https://img.shields.io/depfu/fent/queue2.js)
+[![npm](https://img.shields.io/npm/v/queue2)](https://www.npmjs.com/package/queue2)
+[![Node.js CI](https://github.com/fent/queue2.js/actions/workflows/nodejs.yml/badge.svg)](https://github.com/fent/queue2.js/actions/workflows/nodejs.yml)
 [![codecov](https://codecov.io/gh/fent/queue2.js/branch/master/graph/badge.svg)](https://codecov.io/gh/fent/queue2.js)
 
 # Motive
