@@ -60,7 +60,7 @@ q.push(1, (err) => {
 q.push(1);
 ```
 
-### Queue#active
+### Queue2#active
 
 Number of active tasks that are running.
 

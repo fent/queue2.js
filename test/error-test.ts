@@ -1,22 +1,22 @@
-const Q = require('..');
-const assert = require('node:assert');
+import assert from 'node:assert';
+import Q from '../src';
 
 describe('Worker 1 calls callback with error', () => {
   describe('With task callback', () => {
     it('Task callback gets error', (done) => {
       const q = new Q(
-        (a, callback) => {
+        (a: number, callback: (err: Error | null) => void) => {
           setTimeout(() => {
-            callback(a === 1 ? Error('hello') : null);
+            callback(a === 1 ? new Error('hello') : null);
           });
         },
-        (callback) => {
+        (callback: () => void) => {
           callback();
         },
       );
-      q.push(1, (err) => {
+      q.push(1, (err?: Error | null) => {
         assert.ok(err);
-        assert.equal(err.message, 'hello');
+        assert.equal(err?.message, 'hello');
         done();
       });
       q.push(2);
@@ -27,16 +27,16 @@ describe('Worker 1 calls callback with error', () => {
   describe('Without task callback', () => {
     it('Error is emitted', (done) => {
       const q = new Q(
-        (a, callback) => {
+        (a: number, callback: (err: Error | null) => void) => {
           setTimeout(() => {
-            callback(a === 1 ? Error('foo') : null);
+            callback(a === 1 ? new Error('foo') : null);
           });
         },
-        (callback) => {
+        (callback: () => void) => {
           callback();
         },
       );
-      q.on('error', (err) => {
+      q.on('error', (err: Error) => {
         assert.ok(err);
         assert.equal(err.message, 'foo');
         done();
@@ -47,18 +47,21 @@ describe('Worker 1 calls callback with error', () => {
 
   describe('Later task finishes before errored task', () => {
     it('All task finish', (done) => {
-      let otherCallback, errored;
+      let otherCallback:
+        | ((err: Error | null, res?: unknown) => void)
+        | undefined;
+      let errored: boolean | undefined;
       const q = new Q(
-        (a, callback) =>
+        (a: number, callback: (err: Error | null, res?: unknown) => void) =>
           setTimeout(() => {
             if (a === 1) {
               otherCallback = callback;
             } else if (a === 2) {
               callback(null, a);
-              otherCallback(Error('thing'), a);
+              otherCallback?.(new Error('thing'), a);
             }
           }),
-        (_a, callback) => {
+        (_a: unknown, callback: () => void) => {
           setTimeout(callback);
         },
       );
@@ -79,16 +82,16 @@ describe('Worker 2 calls callback with error', () => {
   describe('With task callback', () => {
     it('Task callback gets error', (done) => {
       const q = new Q(
-        (_a, callback) => {
+        (_a: unknown, callback: () => void) => {
           callback();
         },
-        (_a, callback) => {
-          callback(Error('hello'));
+        (_a: unknown, callback: (err: Error) => void) => {
+          callback(new Error('hello'));
         },
       );
-      q.push(1, (err) => {
+      q.push(1, (err?: Error | null) => {
         assert.ok(err);
-        assert.equal(err.message, 'hello');
+        assert.equal(err?.message, 'hello');
         done();
       });
       q.on('error', done);
@@ -98,14 +101,14 @@ describe('Worker 2 calls callback with error', () => {
   describe('Without task callback', () => {
     it('Error is emitted', (done) => {
       const q = new Q(
-        (callback) => {
+        (_a: unknown, callback: () => void) => {
           callback();
         },
-        (_a, callback) => {
-          callback(Error('foo'));
+        (_a: unknown, callback: (err: Error) => void) => {
+          callback(new Error('foo'));
         },
       );
-      q.on('error', (err) => {
+      q.on('error', (err: Error) => {
         assert.ok(err);
         assert.equal(err.message, 'foo');
         done();

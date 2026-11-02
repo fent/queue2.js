@@ -1,11 +1,13 @@
-const Q = require('..');
-const assert = require('node:assert');
+import assert from 'node:assert';
+import Q from '../src';
+
+const { Queue } = Q;
 
 // Shuffles an array.
-const shuffle = (arr) => {
-  let i = arr.length,
-    j,
-    tmp;
+const shuffle = <T>(arr: T[]): void => {
+  let i = arr.length;
+  let j: number;
+  let tmp: T;
   if (i === 0) return;
   while (--i) {
     j = Math.floor(Math.random() * (i + 1));
@@ -17,37 +19,49 @@ const shuffle = (arr) => {
 
 // Calls pushed callbacks in random order once they are all pushed.
 class RandomCall {
-  constructor(c, list) {
+  private callbacks: (() => void)[];
+  private batchSize?: number;
+  private list: string[];
+  private callCount: number;
+
+  constructor(batchSize: number | undefined, list: string[]) {
     this.callbacks = [];
-    this.c = c;
+    this.batchSize = batchSize;
     this.list = list;
-    this.n = 0;
+    this.callCount = 0;
   }
 
-  push(callback) {
+  push(callback: () => void): void {
     this.callbacks.push(callback);
-    this.n++;
-    if (this.n % this.c === 0 || this.n === this.list.length) {
+    this.callCount++;
+    if (
+      (this.batchSize !== undefined && this.callCount % this.batchSize === 0) ||
+      this.callCount === this.list.length
+    ) {
       shuffle(this.callbacks);
 
       while (this.callbacks.length > 0) {
         const cb = this.callbacks.shift();
-        cb();
+        cb?.();
       }
     }
   }
 }
 
 // Macro.
-const createQ = (c, inject, amount) => {
+const createQ = (concurrency?: number, inject?: number, amount?: number) => {
   const list = ['a', 'b', 'c'];
-  const random1 = new RandomCall(c, list);
-  const random2 = new RandomCall(c, list);
+  const random1 = new RandomCall(concurrency, list);
+  const random2 = new RandomCall(concurrency, list);
 
-  return (done) => {
-    let n = 0;
-    const q = new Q(
-      function worker1(data, callback) {
+  return (done: (err?: unknown) => void) => {
+    let callIndex = 0;
+    const q = new Queue(
+      function worker1(
+        this: Q.Worker1Context,
+        data: string,
+        callback: (err: null, res: string) => void,
+      ) {
         random1.push(() => {
           // Check for inject.
           if (
@@ -55,32 +69,32 @@ const createQ = (c, inject, amount) => {
             inject === this.num &&
             !this.injected
           ) {
-            amount = amount || 1;
-            const arr = new Array(amount);
-            for (let i = 0; i < amount; i++) {
+            const count = amount || 1;
+            const arr = new Array(count);
+            for (let i = 0; i < count; i++) {
               arr[i] = `injected${i}`;
             }
 
             list.splice(inject, 1, ...arr);
-            this.inject(arr, inject);
+            this.inject(arr);
             return;
           }
 
           callback(null, data);
         });
       },
-      (data, callback) => {
+      (data: string, callback: () => void) => {
         if (!data) {
           return callback();
         }
-        assert.equal(data, list[n]);
+        assert.equal(data, list[callIndex]);
 
-        if (++n === list.length) {
+        if (++callIndex === list.length) {
           done();
         }
         random2.push(callback);
       },
-      c || 250,
+      concurrency || 250,
     );
 
     list.forEach((a) => {
@@ -136,14 +150,14 @@ describe('Queue jobs', () => {
 
   describe('Push without all arguments', () => {
     it('Worker gets called with `undefined` arguments', (done) => {
-      let worker1a = null,
-        worker2a = null;
+      let worker1a: unknown = null;
+      let worker2a: unknown = null;
       const q = new Q(
-        (a, callback) => {
+        (a: unknown, callback: () => void) => {
           worker1a = a;
           process.nextTick(callback);
         },
-        (a, callback) => {
+        (a: unknown, callback: () => void) => {
           worker2a = a;
           process.nextTick(callback);
         },
@@ -175,5 +189,42 @@ describe('Kill a queue mid task', () => {
     q.push();
     q.push();
     q.push();
+  });
+});
+
+describe('Module exports interop', () => {
+  it('exports Queue2, Queue, default, and Q aliases', () => {
+    assert.strictEqual(typeof Q, 'function');
+    assert.strictEqual(typeof Queue, 'function');
+    assert.strictEqual(Q, Queue);
+    assert.strictEqual((Q as unknown as Record<string, unknown>).default, Q);
+    assert.strictEqual((Q as unknown as Record<string, unknown>).Queue2, Q);
+    assert.strictEqual((Q as unknown as Record<string, unknown>).Queue, Q);
+    assert.strictEqual((Q as unknown as Record<string, unknown>).Q, Q);
+  });
+});
+
+describe('Generics typing', () => {
+  it('supports strongly typed workers and push arguments', (done) => {
+    const q = new Q(
+      function (
+        this: Q.Worker1Context,
+        item: string,
+        multiplier: number,
+        callback: (err: null, result: number) => void,
+      ) {
+        callback(null, item.length * multiplier);
+      },
+      (result: number, callback: () => void) => {
+        assert.strictEqual(result, 15);
+        callback();
+      },
+    );
+
+    q.push('hello', 3, (err, result) => {
+      assert.ifError(err);
+      assert.strictEqual(result, 15);
+      done();
+    });
   });
 });
