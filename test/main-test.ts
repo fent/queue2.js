@@ -3,6 +3,12 @@ import Q from '../src';
 
 const { Queue } = Q;
 
+const waitFor = async (predicate: () => boolean): Promise<void> => {
+  while (!predicate()) {
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+};
+
 // Shuffles an array.
 const shuffle = <T>(arr: T[]): void => {
   let i = arr.length;
@@ -189,6 +195,100 @@ describe('Kill a queue mid task', () => {
     q.push();
     q.push();
     q.push();
+  });
+
+  it('Ignores inject from a stale worker', async () => {
+    let inject: ((list: unknown[]) => void) | undefined;
+    let finish!: () => void;
+    const q = new Q(
+      function (this: Q.Worker1Context, callback: () => void) {
+        inject = this.inject;
+        finish = callback;
+      },
+      (_args: unknown, callback: () => void) => callback(),
+    );
+
+    q.push();
+    await waitFor(() => inject !== undefined);
+    q.die();
+    inject?.([['injected']]);
+    assert.equal(q.queue.length, 0);
+
+    finish();
+    await waitFor(() => q.active === 0);
+  });
+
+  it('Keeps active count and concurrency after die during worker1', async () => {
+    let running = 0;
+    let maxRunning = 0;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const q = new Q(
+      (x: number, callback: (err: null, res: number) => void) => {
+        running++;
+        maxRunning = Math.max(maxRunning, running);
+        gate.then(() => {
+          running--;
+          callback(null, x);
+        });
+      },
+      (_x: number, callback: () => void) => callback(),
+      1,
+    );
+
+    q.push(1);
+    await waitFor(() => running === 1);
+    q.die();
+    release();
+    await waitFor(() => q.active === 0);
+
+    maxRunning = 0;
+    q.push(2);
+    q.push(3);
+    q.push(4);
+    await waitFor(() => running === 1);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(maxRunning, 1);
+    await waitFor(() => q.active === 0);
+  });
+
+  it('Keeps active count and concurrency after die during worker2', async () => {
+    let running = 0;
+    let maxRunning = 0;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const q = new Q(
+      (x: number, callback: (err: null, res: number) => void) =>
+        callback(null, x),
+      (_x: number, callback: () => void) => {
+        running++;
+        maxRunning = Math.max(maxRunning, running);
+        gate.then(() => {
+          running--;
+          callback();
+        });
+      },
+      1,
+    );
+
+    q.push(1);
+    await waitFor(() => running === 1);
+    q.die();
+    release();
+    await waitFor(() => q.active === 0);
+
+    maxRunning = 0;
+    q.push(2);
+    q.push(3);
+    q.push(4);
+    await waitFor(() => running === 1);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(maxRunning, 1);
+    await waitFor(() => q.active === 0);
   });
 });
 

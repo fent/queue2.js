@@ -27,6 +27,8 @@ class Queue2<
   public active: number;
   private _num: number;
   private _current: number;
+  private _generation = 0;
+  private _taskGenerations = new WeakMap<Queue2.Task, number>();
 
   /**
    * @param concurrency Number of parallel workers.
@@ -58,11 +60,13 @@ class Queue2<
   push(...args: [...TArgs, Queue2.TaskCallback<TResults>?]): void;
   push(...args: [...Partial<TArgs>]): void;
   push(...args: unknown[]): void {
-    this.queue.push({
+    const task: Queue2.Task = {
       num: this._num++,
       injected: false,
       args,
-    });
+    };
+    this._taskGenerations.set(task, this._generation);
+    this.queue.push(task);
     this._next1();
   }
 
@@ -82,7 +86,13 @@ class Queue2<
     // Inject items to the beginning of queue with custom priority.
     for (let i = len - 1; i >= 0; i--) {
       const args = list[i];
-      this.queue.unshift({ num: num + i, args: [args], injected: true });
+      const task: Queue2.Task = {
+        num: num + i,
+        args: [args],
+        injected: true,
+      };
+      this._taskGenerations.set(task, this._generation);
+      this.queue.unshift(task);
     }
     for (let i = 0; i < len; i++) {
       this._next1();
@@ -147,6 +157,7 @@ class Queue2<
       num: task.num,
       injected: task.injected,
       inject: (list: unknown[]) => {
+        if (!this._isCurrentTask(task)) return;
         this._inject(list, task.num);
       },
     };
@@ -161,6 +172,10 @@ class Queue2<
 
     // Add custom callback to args.
     args.push((err: Error | null | undefined, ...results: unknown[]) => {
+      if (!this._isCurrentTask(task)) {
+        this._taskDone();
+        return;
+      }
       this.running1.splice(this.running1.indexOf(task), 1);
       const hasCallback = typeof callback === 'function';
 
@@ -176,12 +191,14 @@ class Queue2<
         return;
       }
 
-      this.running2.push({
+      const nextTask: Queue2.Task = {
         num: task.num,
         injected: false,
         callback: hasCallback ? callback : undefined,
         args: results,
-      });
+      };
+      this._taskGenerations.set(nextTask, this._generation);
+      this.running2.push(nextTask);
       this._next2();
     });
     (this.worker1 as Queue2.AnyWorker1).apply(context, args);
@@ -212,6 +229,10 @@ class Queue2<
 
     // Add callback for worker2
     task.args.push((err?: Error | null) => {
+      if (!this._isCurrentTask(task)) {
+        this._taskDone();
+        return;
+      }
       if (typeof task.callback === 'function') {
         task.callback(err, ...task.args);
       } else if (err) {
@@ -222,11 +243,15 @@ class Queue2<
     (this.worker2 as Queue2.AnyWorker2)(...task.args);
   }
 
+  private _isCurrentTask(task: Queue2.Task): boolean {
+    return this._taskGenerations.get(task) === this._generation;
+  }
+
   /**
    * Kills the queue.
    */
   die(): void {
-    this.active = 0;
+    this._generation++;
     this._num = 0;
     this._current = 0;
     this.queue = [];
