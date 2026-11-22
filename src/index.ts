@@ -15,16 +15,15 @@ class Queue2<
   static default = Queue2;
   static Q = Queue2;
 
-  public worker1: (
-    this: Queue2.Worker1Context,
-    ...args: [...TArgs, Queue2.Worker1Callback]
-  ) => unknown;
-  public worker2: (...args: [...TResults, Queue2.Worker2Callback]) => unknown;
+  public worker1: Queue2.Worker1<TArgs, TResults>;
+  public worker2: Queue2.Worker2<TResults>;
   public concurrency: number | undefined;
   public queue: Queue2.Task[];
   public running1: Queue2.Task[];
   public running2: Queue2.Task[];
   public active: number;
+  private _isWorker1Async: boolean;
+  private _isWorker2Async: boolean;
   private _num: number;
   private _current: number;
   private _generation = 0;
@@ -34,17 +33,26 @@ class Queue2<
    * @param concurrency Number of parallel workers.
    */
   constructor(
-    worker1: (
-      this: Queue2.Worker1Context,
-      ...args: [...TArgs, Queue2.Worker1Callback]
-    ) => unknown,
-    worker2: (...args: [...TResults, Queue2.Worker2Callback]) => unknown,
+    worker1: Queue2.AsyncWorker1<TArgs, TResults[0]>,
+    worker2: Queue2.AsyncWorker2<TResults>,
+    concurrency?: number,
+  );
+  constructor(
+    worker1: Queue2.Worker1<TArgs, TResults>,
+    worker2: Queue2.Worker2<TResults>,
+    concurrency?: number,
+  );
+  constructor(
+    worker1: Queue2.Worker1<TArgs, TResults>,
+    worker2: Queue2.Worker2<TResults>,
     concurrency?: number,
   ) {
     super();
 
     this.worker1 = worker1;
     this.worker2 = worker2;
+    this._isWorker1Async = worker1.constructor.name === 'AsyncFunction';
+    this._isWorker2Async = worker2.constructor.name === 'AsyncFunction';
     this.concurrency = concurrency;
     this.queue = [];
     this.running1 = [];
@@ -80,6 +88,7 @@ class Queue2<
 
     // Edit order of items in queue and running.
     if (shiftDelta > 0) {
+      this._num += shiftDelta;
       this._offsetAllTaskNums(num, shiftDelta);
     }
 
@@ -153,25 +162,27 @@ class Queue2<
       this.emit('full');
     }
 
+    let injected = false;
     const context: Queue2.Worker1Context = {
       num: task.num,
       injected: task.injected,
       inject: (list: unknown[]) => {
         if (!this._isCurrentTask(task)) return;
+        injected = true;
         this._inject(list, task.num);
       },
     };
 
     const args = task.args;
-    const callback = args.splice(this.worker1.length - 1, 1)[0] as
+    const expectedArgs = this._expectedWorker1Args();
+    const callback = args.splice(expectedArgs, 1)[0] as
       | Queue2.TaskCallback
       | undefined;
 
     // Add missing arguments.
-    padArgs(args, this.worker1.length - 1);
+    padArgs(args, expectedArgs);
 
-    // Add custom callback to args.
-    args.push((err: Error | null | undefined, ...results: unknown[]) => {
+    const done1 = (err: Error | null | undefined, ...results: unknown[]) => {
       if (!this._isCurrentTask(task)) {
         this._taskDone();
         return;
@@ -180,6 +191,7 @@ class Queue2<
       const hasCallback = typeof callback === 'function';
 
       if (err) {
+        this._num--;
         this._offsetAllTaskNums(task.num, -1);
         if (hasCallback) {
           callback(err);
@@ -200,8 +212,29 @@ class Queue2<
       this._taskGenerations.set(nextTask, this._generation);
       this.running2.push(nextTask);
       this._next2();
-    });
-    (this.worker1 as Queue2.AnyWorker1).apply(context, args);
+    };
+
+    if (this._isWorker1Async) {
+      Promise.resolve(
+        (this.worker1 as Queue2.AnyWorker1).apply(context, args),
+      ).then(
+        (result) => {
+          if (!injected) done1(null, result);
+        },
+        (err: Error) => {
+          done1(err);
+        },
+      );
+    } else {
+      args.push(done1);
+      (this.worker1 as Queue2.AnyWorker1).apply(context, args);
+    }
+  }
+
+  private _expectedWorker1Args(): number {
+    return this._isWorker1Async
+      ? this.worker1.length
+      : Math.max(0, this.worker1.length - 1);
   }
 
   /**
@@ -224,23 +257,31 @@ class Queue2<
    * Runs a task through the second worker.
    */
   private _run(task: Queue2.Task): void {
-    // Add missing arguments.
-    padArgs(task.args, this.worker2.length - 1);
-
-    // Add callback for worker2
-    task.args.push((err?: Error | null) => {
+    const results = task.args.slice();
+    const done2 = (err?: Error | null) => {
       if (!this._isCurrentTask(task)) {
         this._taskDone();
         return;
       }
       if (typeof task.callback === 'function') {
-        task.callback(err, ...task.args);
+        task.callback(err, ...results);
       } else if (err) {
         this.emit('error', err);
       }
       this._taskDone();
-    });
-    (this.worker2 as Queue2.AnyWorker2)(...task.args);
+    };
+
+    if (this._isWorker2Async) {
+      padArgs(task.args, this.worker2.length);
+      Promise.resolve((this.worker2 as Queue2.AnyWorker2)(...task.args)).then(
+        () => done2(),
+        (err: Error) => done2(err),
+      );
+    } else {
+      padArgs(task.args, this.worker2.length - 1);
+      task.args.push(done2);
+      (this.worker2 as Queue2.AnyWorker2)(...task.args);
+    }
   }
 
   private _isCurrentTask(task: Queue2.Task): boolean {
@@ -291,17 +332,31 @@ namespace Queue2 {
     inject: (list: unknown[]) => void;
   }
 
+  export type CallbackWorker1<TArgs extends readonly unknown[] = unknown[]> = (
+    this: Worker1Context,
+    ...args: [...TArgs, Worker1Callback]
+  ) => unknown;
+
+  export type AsyncWorker1<
+    TArgs extends readonly unknown[] = unknown[],
+    TResult = unknown,
+  > = (this: Worker1Context, ...args: TArgs) => Promise<TResult>;
+
   export type Worker1<
     TArgs extends readonly unknown[] = unknown[],
     TResults extends readonly unknown[] = unknown[],
-  > = (
-    this: Worker1Context,
-    ...args: [...TArgs, Worker1Callback<TResults>]
-  ) => unknown;
+  > = CallbackWorker1<TArgs> | AsyncWorker1<TArgs, TResults[0]>;
 
-  export type Worker2<TResults extends readonly unknown[] = unknown[]> = (
-    ...args: [...TResults, Worker2Callback]
-  ) => unknown;
+  export type CallbackWorker2<TResults extends readonly unknown[] = unknown[]> =
+    (...args: [...TResults, Worker2Callback]) => unknown;
+
+  export type AsyncWorker2<TResults extends readonly unknown[] = unknown[]> = (
+    ...args: TResults
+  ) => Promise<unknown>;
+
+  export type Worker2<TResults extends readonly unknown[] = unknown[]> =
+    | CallbackWorker2<TResults>
+    | AsyncWorker2<TResults>;
 
   export type Queue<
     TArgs extends readonly unknown[] = unknown[],
