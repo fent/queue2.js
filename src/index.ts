@@ -64,10 +64,32 @@ class Queue2<
 
   /**
    * Add new task to queue.
+   * Returns a Promise when no task callback is given.
    */
-  push(...args: [...TArgs, Queue2.TaskCallback<TResults>?]): void;
-  push(...args: [...Partial<TArgs>]): void;
-  push(...args: unknown[]): void {
+  push(...args: [...TArgs, Queue2.TaskCallback<TResults>]): void;
+  push(...args: [...Partial<TArgs>]): Promise<TResults>;
+  push(...args: unknown[]): Promise<TResults> | undefined {
+    const expectedArgs = this._expectedWorker1Args();
+    if (typeof args[expectedArgs] === 'function') {
+      this._enqueue(args);
+      return undefined;
+    }
+
+    return new Promise<TResults>((resolve, reject) => {
+      const callArgs = [...args];
+      padArgs(callArgs, expectedArgs);
+      callArgs.push((err?: Error | null, ...results: unknown[]) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(results as unknown as TResults);
+        }
+      });
+      this._enqueue(callArgs);
+    });
+  }
+
+  private _enqueue(args: unknown[]): void {
     const task: Queue2.Task = {
       num: this._num++,
       injected: false,

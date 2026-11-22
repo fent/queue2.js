@@ -388,7 +388,6 @@ describe('Async workers', () => {
   });
 
   it('Reports errors when async worker1 or worker2 rejects', async () => {
-    const errors: string[] = [];
     const q1 = new Queue(
       async (n: number) => {
         if (n === 1) throw new Error('w1 fail');
@@ -396,10 +395,8 @@ describe('Async workers', () => {
       },
       async (_res: number) => {},
     );
-    q1.on('error', (err: Error) => errors.push(err.message));
-    q1.push(1);
-    q1.push(2);
-    await new Promise<void>((resolve) => q1.on('drain', resolve));
+    await assert.rejects(() => q1.push(1), /w1 fail/);
+    assert.deepEqual(await q1.push(2), [2]);
 
     const q2 = new Queue(
       async (n: number) => n,
@@ -407,11 +404,18 @@ describe('Async workers', () => {
         if (res === 1) throw new Error('w2 fail');
       },
     );
-    q2.on('error', (err: Error) => errors.push(err.message));
-    q2.push(1);
-    q2.push(2);
-    await new Promise<void>((resolve) => q2.on('drain', resolve));
+    await assert.rejects(() => q2.push(1), /w2 fail/);
+    assert.deepEqual(await q2.push(2), [2]);
+  });
 
-    assert.deepEqual(errors, ['w1 fail', 'w2 fail']);
+  it('Resolves push promise with results for callback and async workers', async () => {
+    const q = new Queue(
+      (n: number, cb: (err: Error | null, res?: number) => void) => {
+        cb(null, n + 1);
+      },
+      (_res: number, cb: () => void) => cb(),
+    );
+
+    assert.deepEqual(await q.push(4), [5]);
   });
 });

@@ -41,7 +41,7 @@ The `callback` should not be called when `inject` is used. Since the tasks injec
 
 ### Queue2#push(arg1, arg2, arg3...)
 
-Pushes a task onto the queue. If the last argument is a function and it corresponds with the position of the callback from the first worker, then it will be called once there is an error with the task, or the task finishes.
+Pushes a task onto the queue. If the last argument is a function and it corresponds with the position of the callback from the first worker, then it will be called once there is an error with the task, or the task finishes. Otherwise, `push` returns a `Promise` that resolves with the task's results array or rejects on error.
 
 For example:
 
@@ -57,7 +57,7 @@ q.push(1, (err) => {
  // will be called once this finishes
 });
 
-q.push(1);
+await q.push(1);
 ```
 
 ### Queue2#active
@@ -74,7 +74,7 @@ Kills the queue.
 ### Event: 'error'
 * `Error`
 
-Emitted when there is an error processing a task and a callback isn't given to the `push` method.
+Emitted when there is an error processing an injected task without a callback.
 
 ### Event: 'full'
 

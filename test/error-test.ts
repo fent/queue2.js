@@ -25,7 +25,7 @@ describe('Worker 1 calls callback with error', () => {
   });
 
   describe('Without task callback', () => {
-    it('Error is emitted', (done) => {
+    it('Rejects returned promise', async () => {
       const q = new Q(
         (a: number, callback: (err: Error | null) => void) => {
           setTimeout(() => {
@@ -36,12 +36,31 @@ describe('Worker 1 calls callback with error', () => {
           callback();
         },
       );
+      await assert.rejects(() => q.push(1), /foo/);
+    });
+
+    it('Emits error for injected task', (done) => {
+      const q = new Q(
+        function (
+          this: Q.Worker1Context,
+          a: number,
+          callback: (err: Error | null) => void,
+        ) {
+          if (a === 0) {
+            this.inject([1]);
+            return;
+          }
+          setTimeout(() => callback(new Error('injected w1')));
+        },
+        (callback: () => void) => {
+          callback();
+        },
+      );
       q.on('error', (err: Error) => {
-        assert.ok(err);
-        assert.equal(err.message, 'foo');
+        assert.equal(err.message, 'injected w1');
         done();
       });
-      q.push(1);
+      q.push(0);
     });
   });
 
@@ -65,14 +84,13 @@ describe('Worker 1 calls callback with error', () => {
           setTimeout(callback);
         },
       );
-      q.on('error', () => {
-        errored = true;
-      });
       q.on('drain', () => {
         assert.ok(errored);
         done();
       });
-      q.push(1);
+      q.push(1).catch(() => {
+        errored = true;
+      });
       q.push(2);
     });
   });
@@ -99,7 +117,7 @@ describe('Worker 2 calls callback with error', () => {
   });
 
   describe('Without task callback', () => {
-    it('Error is emitted', (done) => {
+    it('Rejects returned promise', async () => {
       const q = new Q(
         (_a: unknown, callback: () => void) => {
           callback();
@@ -108,12 +126,27 @@ describe('Worker 2 calls callback with error', () => {
           callback(new Error('foo'));
         },
       );
+      await assert.rejects(() => q.push(1), /foo/);
+    });
+
+    it('Emits error for injected task', (done) => {
+      const q = new Q(
+        function (this: Q.Worker1Context, a: number, callback: () => void) {
+          if (a === 0) {
+            this.inject([1]);
+            return;
+          }
+          callback();
+        },
+        (_a: unknown, callback: (err: Error) => void) => {
+          callback(new Error('injected w2'));
+        },
+      );
       q.on('error', (err: Error) => {
-        assert.ok(err);
-        assert.equal(err.message, 'foo');
+        assert.equal(err.message, 'injected w2');
         done();
       });
-      q.push(1);
+      q.push(0);
     });
   });
 });
